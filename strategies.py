@@ -85,32 +85,161 @@ class ExampleEngine(MinimalEngine):
     pass
 
 class Move(ExampleEngine):
+    pawnWhiteTable = [
+        0,  0,  0,  0,  0,  0,  0,  0,
+        50, 50, 50, 50, 50, 50, 50, 50,
+        10, 10, 20, 30, 30, 20, 10, 10,
+        5,  5, 10, 25, 25, 10,  5,  5,
+        0,  0,  0, 20, 20,  0,  0,  0,
+        5, -5,-10,  0,  0,-10, -5,  5,
+        5, 10, 10,-20,-20, 10, 10,  5,
+        0,  0,  0,  0,  0,  0,  0,  0
+    ]
+    pawnBlackTable = list(reversed(pawnWhiteTable))
+
+    knightWhiteTable = [
+        -50,-40,-30,-30,-30,-30,-40,-50,
+        -40,-20,  0,  0,  0,  0,-20,-40,
+        -30,  0, 10, 15, 15, 10,  0,-30,
+        -30,  5, 15, 20, 20, 15,  5,-30,
+        -30,  0, 15, 20, 20, 15,  0,-30,
+        -30,  5, 10, 15, 15, 10,  5,-30,
+        -40,-20,  0,  5,  5,  0,-20,-40,
+        -50,-40,-30,-30,-30,-30,-40,-50
+    ]
+    knightBlackTable = list(reversed(knightWhiteTable))
+
+    bishopWhiteTable = [
+        -20,-10,-10,-10,-10,-10,-10,-20,
+        -10,  0,  0,  0,  0,  0,  0,-10,
+        -10,  0,  5, 10, 10,  5,  0,-10,
+        -10,  5,  5, 10, 10,  5,  5,-10,
+        -10,  0, 10, 10, 10, 10,  0,-10,
+        -10, 10, 10, 10, 10, 10, 10,-10,
+        -10,  5,  0,  0,  0,  0,  5,-10,
+        -20,-10,-10,-10,-10,-10,-10,-20
+    ]
+    bishopBlackTable = list(reversed(bishopWhiteTable))
+
+    rookWhiteTable = [
+        0,  0,  0,  0,  0,  0,  0,  0,
+        5, 10, 10, 10, 10, 10, 10,  5,
+        -5,  0,  0,  0,  0,  0,  0, -5,
+        -5,  0,  0,  0,  0,  0,  0, -5,
+        -5,  0,  0,  0,  0,  0,  0, -5,
+        -5,  0,  0,  0,  0,  0,  0, -5,
+        -5,  0,  0,  0,  0,  0,  0, -5,
+        0,  0,  0,  5,  5,  0,  0,  0
+    ]
+    rookBlackTable = list(reversed(rookWhiteTable))
+
+    queenWhiteTable = [
+        -20,-10,-10, -5, -5,-10,-10,-20,
+        -10,  0,  0,  0,  0,  0,  0,-10,
+        -10,  0,  5,  5,  5,  5,  0,-10,
+        -5,  0,  5,  5,  5,  5,  0, -5,
+        0,  0,  5,  5,  5,  5,  0, -5,
+        -10,  5,  5,  5,  5,  5,  0,-10,
+        -10,  0,  5,  0,  0,  0,  0,-10,
+        -20,-10,-10, -5, -5,-10,-10,-20
+    ]
+    queenBlackTable = list(reversed(queenWhiteTable))
+
+    kingWhiteMiddlegameTable = [
+        -30,-40,-40,-50,-50,-40,-40,-30,
+        -30,-40,-40,-50,-50,-40,-40,-30,
+        -30,-40,-40,-50,-50,-40,-40,-30,
+        -30,-40,-40,-50,-50,-40,-40,-30,
+        -20,-30,-30,-40,-40,-30,-30,-20,
+        -10,-20,-20,-20,-20,-20,-20,-10,
+        20, 20,  0,  0,  0,  0, 20, 20,
+        20, 30, 10,  0,  0, 10, 30, 20
+    ]
+    kingBlackMiddlegameTable = list(reversed(kingWhiteMiddlegameTable))
+
+    kingWhiteEndgameTable = [
+        -50,-40,-30,-20,-20,-30,-40,-50,
+        -30,-20,-10,  0,  0,-10,-20,-30,
+        -30,-10, 20, 30, 30, 20,-10,-30,
+        -30,-10, 30, 40, 40, 30,-10,-30,
+        -30,-10, 30, 40, 40, 30,-10,-30,
+        -30,-10, 20, 30, 30, 20,-10,-30,
+        -30,-30,  0,  0,  0,  0,-30,-30,
+        -50,-30,-30,-30,-30,-30,-30,-50
+    ]
+    kingBlackEndgameTable = list(reversed(kingWhiteEndgameTable))
+
+    def check_end_game(self, board):
+        queens = 0
+        minors = 0
+
+        for square in chess.SQUARES:
+            piece = board.piece_at(square)
+            if piece and piece.piece_type == chess.QUEEN:
+                queens += 1
+            if piece and (piece.piece_type == chess.BISHOP or piece.piece_type == chess.KNIGHT):
+                minors += 1
+
+        if queens == 0 or (queens == 2 and minors <= 1):
+            return True
+
+        return False
+
     def piece_value(self, piece):
         if piece == None:
             return 0
 
         if piece.piece_type == chess.PAWN:
-            return 1
+            return 100
         if piece.piece_type == chess.KNIGHT:
-            return 3
+            return 320
         if piece.piece_type == chess.BISHOP:
-            return 3
+            return 330
         if piece.piece_type == chess.ROOK:
-            return 5
+            return 500
         if piece.piece_type == chess.QUEEN:
-            return 9
+            return 900
         if piece.piece_type == chess.KING:
-            return 1000
+            return 200000
         
         return 0
 
+    def eval_piece(self, piece, square, endgame):
+        if piece == None:
+            return 0
+
+        mapping = []
+
+        if piece.piece_type == chess.PAWN:
+            mapping = self.pawnWhiteTable if piece.color == chess.WHITE else self.pawnBlackTable
+        if piece.piece_type == chess.KNIGHT:
+            mapping = self.knightWhiteTable if piece.color == chess.WHITE else self.knightBlackTable
+        if piece.piece_type == chess.BISHOP:
+            mapping = self.bishopWhiteTable if piece.color == chess.WHITE else self.bishopBlackTable
+        if piece.piece_type == chess.ROOK:
+            mapping = self.rookWhiteTable if piece.color == chess.WHITE else self.rookBlackTable
+        if piece.piece_type == chess.QUEEN:
+            mapping = self.queenWhiteTable if piece.color == chess.WHITE else self.queenBlackTable
+        if piece.piece_type == chess.KING:
+            if endgame:
+                mapping = (
+                    self.kingWhiteEndgameTable if piece.color == chess.WHITE else self.kingBlackEndgameTable
+                )
+            else:
+                mapping = self.kingWhiteMiddlegameTable if piece.color == chess.WHITE else self.kingBlackMiddlegameTable
+        
+        return mapping[square]
+
     def evaluate_board(self, board):
         total = 0
+
         for square in chess.SQUARES:
             piece = board.piece_at(square)
             if not piece:
                 continue
-            value = self.piece_value(piece)
+            
+            endgame = self.check_end_game(board)
+            value = self.piece_value(piece) + self.eval_piece(piece, square, endgame)
             total += value if piece.color == chess.WHITE else -value
         
         return total
@@ -181,4 +310,4 @@ class Move(ExampleEngine):
     def search(self, board, *args):
         if board.fullmove_number < 3:
             return random.choice(list(board.legal_moves))
-        return self.minimax_root(3, board)
+        return self.minimax_root(2, board)
